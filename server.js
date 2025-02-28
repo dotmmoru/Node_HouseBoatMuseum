@@ -77,6 +77,36 @@ app.get("/photos", (req, res) => {
     res.json({ photos });
 });
 
+// Function to delete photos older than 15 minutes
+const deleteOldPhotos = () => {
+    const expirationTime = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const now = Date.now();
+
+    fs.readdirSync(uploadDir).forEach((folder) => {
+        const folderPath = path.join(uploadDir, folder);
+
+        if (fs.statSync(folderPath).isDirectory()) {
+            fs.readdirSync(folderPath).forEach((file) => {
+                const filePath = path.join(folderPath, file);
+                const fileStat = fs.statSync(filePath);
+
+                if (now - fileStat.mtimeMs > expirationTime) {
+                    fs.unlink(filePath, (err) => {
+                        if (err) {
+                            console.error(`Error deleting file ${filePath}:`, err);
+                        } else {
+                            console.log(`Deleted old file: ${filePath}`);
+                        }
+                    });
+                }
+            });
+        }
+    });
+};
+
+// Run the cleanup function every 5 minutes
+setInterval(deleteOldPhotos, 5 * 60 * 1000);
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server started at http://localhost:${PORT}`);
